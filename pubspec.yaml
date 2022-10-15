@@ -1,0 +1,17 @@
+name: state_provider
+description: A simple-stupid state management library for Flutter.
+version: 0.0.1
+homepage: https://github.com/Riki1312/state-provider
+repository: https://github.com/Riki1312/state-provider
+
+environment:
+  sdk: ">=2.18.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
