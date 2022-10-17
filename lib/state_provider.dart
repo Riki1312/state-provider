@@ -8,13 +8,21 @@ import 'package:flutter/widgets.dart';
 /// Contains the immutable value of a state.
 class StateValue<T> implements Listenable {
   /// Creates a [StateValue] with the given [initialValue].
-  StateValue(T initialValue) : _value = initialValue;
+  StateValue(
+    T initialValue, {
+    this.onAccess,
+  }) : _value = initialValue;
 
   T _value;
+
+  bool _firstAccess = true;
 
   final _streamController = StreamController<T>.broadcast();
 
   final _subscriptions = <VoidCallback, StreamSubscription<T>>{};
+
+  /// This function is called only once when the state is first retrieved.
+  final Function()? onAccess;
 
   /// The current value of the state.
   ///
@@ -49,6 +57,14 @@ class StateValue<T> implements Listenable {
   void removeListener(VoidCallback listener) {
     _subscriptions.remove(listener)?.cancel();
   }
+
+  void _notifyAccess() {
+    // Notify the first access.
+    if (_firstAccess) {
+      _firstAccess = false;
+      onAccess?.call();
+    }
+  }
 }
 
 /// Provides a [state] to its descendants Widget.
@@ -82,10 +98,11 @@ class StateProvider<T extends StateValue> extends InheritedNotifier {
     final inherited = listen
         ? context.dependOnInheritedWidgetOfExactType<StateProvider<T>>()
         : context.findAncestorWidgetOfExactType<StateProvider<T>>();
-
     if (inherited == null) {
       throw StateNotFoundException(T.runtimeType, context.widget.runtimeType);
     }
+
+    inherited.state._notifyAccess();
     return inherited.state;
   }
 }
