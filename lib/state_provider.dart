@@ -8,21 +8,13 @@ import 'package:flutter/widgets.dart';
 /// Contains the immutable value of a state.
 class StateValue<T> implements Listenable {
   /// Creates a [StateValue] with the given [initialValue].
-  StateValue(
-    T initialValue, {
-    this.onAccess,
-  }) : _value = initialValue;
+  StateValue(T initialValue) : _value = initialValue;
 
   T _value;
-
-  bool _firstAccess = true;
 
   final _streamController = StreamController<T>.broadcast();
 
   final _subscriptions = <VoidCallback, StreamSubscription<T>>{};
-
-  /// This function is called only once when the state is first retrieved.
-  final Function()? onAccess;
 
   /// The current value of the state.
   ///
@@ -58,11 +50,19 @@ class StateValue<T> implements Listenable {
     _subscriptions.remove(listener)?.cancel();
   }
 
+  bool _firstAccess = true;
+
+  /// Function called the first time the state is retrieved.
+  ///
+  /// This can be overridden to perform some initial state setup.
+  /// For example, to load data from a remote source.
+  void onFirstAccess() async {}
+
   void _notifyAccess() {
     // Notify the first access.
     if (_firstAccess) {
       _firstAccess = false;
-      onAccess?.call();
+      onFirstAccess();
     }
   }
 }

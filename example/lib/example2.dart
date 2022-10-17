@@ -3,53 +3,18 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:state_provider/state_provider.dart';
 
-typedef CreateWidgetFunction<T> = Widget Function(T value);
-
-abstract class DataValue {
-  static defaultWidget<T>(T value) => const SizedBox.shrink();
-
-  static Widget mapToWidget(
-    DataValue value, {
-    CreateWidgetFunction? loading,
-    CreateWidgetFunction<String>? error,
-    CreateWidgetFunction<String>? ready,
-  }) {
-    if (value is DataLoading) {
-      return loading?.call(value) ?? defaultWidget(value);
-    } else if (value is DataError) {
-      return error?.call(value.message) ?? defaultWidget(value);
-    } else if (value is DataReady) {
-      return ready?.call(value.data) ?? defaultWidget(value);
-    }
-
-    return defaultWidget(value);
-  }
-}
-
-class DataLoading extends DataValue {}
-
-class DataError<T> extends DataValue {
-  DataError(this.message);
-
-  final T message;
-}
-
-class DataReady<T> extends DataValue {
-  DataReady(this.data);
-
-  final T data;
-}
-
-//
+import 'package:state_provider_example/data_value.dart';
 
 class UserState extends StateValue<DataValue> {
-  UserState() : super(DataLoading(), onAccess: () => loadData());
+  UserState() : super(DataLoading());
+
+  @override
+  void onFirstAccess() => loadData();
 
   void loadData() async {
-    print('Start loading data');
-
     value = DataLoading();
 
+    // Fake fetch data.
     await Future.delayed(const Duration(seconds: 2));
     int random = Random.secure().nextInt(10);
 
@@ -90,8 +55,8 @@ class MyHomePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Example')),
       body: const Center(
-        //child: MyHomeText(),
-        child: Text('Hello World'),
+        child: MyHomeText(),
+        //child: Text('Hello World'),
       ),
     );
   }
