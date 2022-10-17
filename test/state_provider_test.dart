@@ -125,4 +125,99 @@ void main() {
       );
     });
   });
+
+  group('StateContext', () {
+    testWidgets('read the state from a StateProvider', (tester) async {
+      final state = StateValue<int>(10);
+      final provider = StateProvider(
+        state: state,
+        child: Builder(builder: (context) {
+          final v = context.read<StateValue<int>>().value;
+          return Text('$v', textDirection: TextDirection.ltr);
+        }),
+      );
+
+      await tester.pumpWidget(provider);
+      expect(find.text('10'), findsOneWidget);
+    });
+
+    testWidgets('watch the state from a StateProvider', (tester) async {
+      final state = StateValue<int>(10);
+      final provider = StateProvider(
+        state: state,
+        child: Builder(builder: (context) {
+          final v = context.watch<StateValue<int>>().value;
+          return Text('$v', textDirection: TextDirection.ltr);
+        }),
+      );
+
+      await tester.pumpWidget(provider);
+      expect(find.text('10'), findsOneWidget);
+    });
+
+    testWidgets('reading the state does not rebuild the Widget',
+        (tester) async {
+      int buildCount = 0;
+      final state = StateValue<int>(10);
+      final provider = StateProvider(
+        state: state,
+        child: Builder(builder: (context) {
+          buildCount++;
+          final s = context.read<StateValue<int>>();
+          return Text('${s.value}', textDirection: TextDirection.ltr);
+        }),
+      );
+
+      await tester.pumpWidget(provider);
+      expect(find.text('10'), findsOneWidget);
+      expect(buildCount, 1);
+
+      state.value = 20;
+
+      await tester.pumpWidget(provider);
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('20'), findsNothing);
+      expect(buildCount, 1);
+    });
+
+    testWidgets('watching the state rebuild the Widget', (tester) async {
+      int buildCount = 0;
+      final state = StateValue<int>(10);
+      final provider = StateProvider(
+        state: state,
+        child: Builder(builder: (context) {
+          buildCount++;
+          final s = context.watch<StateValue<int>>();
+          return Text('${s.value}', textDirection: TextDirection.ltr);
+        }),
+      );
+
+      await tester.pumpWidget(provider);
+      expect(find.text('10'), findsOneWidget);
+      expect(buildCount, 1);
+
+      state.value = 20;
+
+      await tester.pumpWidget(provider);
+      expect(find.text('20'), findsOneWidget);
+      expect(buildCount, 2);
+    });
+
+    testWidgets('throws an error if the StateProvider is not found',
+        (tester) async {
+      final builder = Builder(builder: (context) {
+        context.read<StateValue<String>>();
+        return Container();
+      });
+
+      await tester.pumpWidget(builder);
+
+      expect(
+        tester.takeException(),
+        isA<StateNotFoundException>()
+            .having((err) => err.stateType, 'stateType', Type)
+            .having((err) => err.widgetType, 'widgetType', Builder),
+      );
+    });
+  });
 }
