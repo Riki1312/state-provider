@@ -14,8 +14,8 @@ class MyApp extends StatelessWidget {
     print("Build MyApp");
 
     return StateProvider(
-      data: ValueNotifier<int>(1),
-      //data: CounterState(),
+      state: ListState(),
+      // state: StateValue<int>(1),
       child: const MaterialApp(
         title: 'Example',
         home: MyHomePage(),
@@ -54,11 +54,10 @@ class MyHomeText extends StatelessWidget {
       children: [
         Builder(
           builder: (context) {
-            return Text('Count: ${context.watch<ValueNotifier<int>>().value}');
+            return Text('Count: ${context.watch<ListState>().value}');
+            // return Text('Count: ${context.watch<StateValue<int>>().value}');
           },
         ),
-        //Text('Count: ${StateProvider.of<ValueNotifier<int>>(context).value}'),
-        //Text('Count: ${StateProvider.of<CounterState>(context).count}'),
       ],
     );
   }
@@ -74,8 +73,8 @@ class MyHomeButton extends StatelessWidget {
     return Center(
       child: ElevatedButton(
         onPressed: () {
-          context.read<ValueNotifier<int>>().value++;
-          //StateProvider.of<CounterState>(context, listen: false).increment();
+          context.read<ListState>().increment();
+          //context.read<StateValue<int>>().value++;
         },
         child: const Text('Button'),
       ),
@@ -85,13 +84,18 @@ class MyHomeButton extends StatelessWidget {
 
 //
 
-class CounterState extends ChangeNotifier {
-  int _count = 0;
-
-  int get count => _count;
+class CounterState extends StateValue<int> {
+  CounterState() : super(0);
 
   void increment() {
-    _count++;
-    notifyListeners();
+    value++;
+  }
+}
+
+class ListState extends StateValue<List<String>> {
+  ListState() : super(["Hey"]);
+
+  void increment() {
+    value = [...value, "Hey"];
   }
 }

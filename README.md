@@ -6,7 +6,7 @@ A simple-stupid state management library for Flutter.
 dependencies:
   state_provider:
     git:
-      url: git://github.com/riki1312/state-provider.git
+      url: https://github.com/Riki1312/state-provider.git
 ```
 
 ```sh
