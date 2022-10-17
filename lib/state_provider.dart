@@ -3,50 +3,48 @@ library state_provider;
 
 import 'package:flutter/widgets.dart';
 
+/// Contains the immutable value of a state.
 class StateValue<T> {
+  /// Creates a [StateValue] with the given [initialValue].
   StateValue(T initialValue) : _notifier = ValueNotifier<T>(initialValue);
 
   final ValueNotifier<T> _notifier;
 
+  /// The current value of the state.
+  ///
+  /// When this value is set to a new object,
+  /// the Widgets listening to this state will be rebuilt.
+  ///
+  /// The value object should be immutable.
   T get value => _notifier.value;
   set value(T newValue) => _notifier.value = newValue;
 }
 
-class StateData<T> {
-  StateData(T initialData) : _notifier = ValueNotifier<T>(initialData);
-
-  final ValueNotifier<T> _notifier;
-
-  T get value => _notifier.value;
-
-  @protected
-  void emit(T data) => _notifier.value = data;
-}
-
-/// Provides a state [data] to its descendants Widget.
+/// Provides a [state] to its descendants Widget.
 ///
 /// Descendants can access and listen to the state using
 /// [StateProvider.of] or through `context.watch` and `context.read`.
 ///
-/// The state object must extends [StateData].
-class StateProvider<T extends StateData> extends InheritedNotifier {
+/// The state object must extends [StateValue].
+class StateProvider<T extends StateValue> extends InheritedNotifier {
+  /// Creates a [StateProvider] with the given [state].
   StateProvider({
     Key? key,
-    required this.data,
+    required this.state,
     required super.child,
-  }) : super(key: key, notifier: data._notifier);
+  }) : super(key: key, notifier: state._notifier);
 
   /// The state object.
-  final T data;
+  final T state;
 
   /// Retrieve and listen to the state from the nearest [StateProvider]
   /// ancestor that holds a state of type [T].
   ///
   /// Set [listen] to `false` to not rebuild
-  /// the Widget when the state notifies changes.
+  /// the Widget when the state value changes.
   ///
-  /// If the [StateProvider] is not found, throws a [StateProviderNotFound] error.
-  static T of<T extends StateData>(
+  /// If the [StateProvider] is not found, throws a [StateNotFoundException].
+  static T of<T extends StateValue>(
     BuildContext context, {
     bool listen = true,
   }) {
@@ -55,17 +53,16 @@ class StateProvider<T extends StateData> extends InheritedNotifier {
         : context.findAncestorWidgetOfExactType<StateProvider<T>>();
 
     if (inherited == null) {
-      throw StateProviderNotFound(T.runtimeType, context.widget.runtimeType);
+      throw StateNotFoundException(T.runtimeType, context.widget.runtimeType);
     }
-    return inherited.data;
+    return inherited.state;
   }
 }
 
 /// The [Exception] that will be thrown if [StateProvider.of] fails to
-/// find a [StateProvider] as an ancestor of the [BuildContext] used.
-class StateProviderNotFound implements Exception {
-  /// Create a ProviderNotFound error.
-  StateProviderNotFound(
+/// find a [StateProvider] ancestor that holds a state of the specified type.
+class StateNotFoundException implements Exception {
+  StateNotFoundException(
     this.stateType,
     this.widgetType,
   );
@@ -93,12 +90,12 @@ extension StateContext on BuildContext {
   /// ancestor that holds a state of type [T].
   ///
   /// As the opposite of [watch], this will not rebuild
-  /// the Widget when the state notifies changes.
+  /// the Widget when the state value changes.
   ///
   /// This is a shorthand for `StateProvider.of<T>(context, listen: false)`.
   ///
-  /// If the [StateProvider] is not found, throws a [StateProviderNotFound] error.
-  T read<T extends StateData>() {
+  /// If the [StateProvider] is not found, throws a [StateNotFoundException].
+  T read<T extends StateValue>() {
     return StateProvider.of<T>(this, listen: false);
   }
 
@@ -106,12 +103,12 @@ extension StateContext on BuildContext {
   /// ancestor that holds a state of type [T].
   ///
   /// As the opposite of [read], this will rebuild
-  /// the Widget when the state notifies changes.
+  /// the Widget when the state value changes.
   ///
   /// This is a shorthand for `StateProvider.of<T>(context)`.
   ///
-  /// If the [StateProvider] is not found, throws a [StateProviderNotFound] error.
-  T watch<T extends StateData>() {
+  /// If the [StateProvider] is not found, throws a [StateNotFoundException].
+  T watch<T extends StateValue>() {
     return StateProvider.of<T>(this);
   }
 }

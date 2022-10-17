@@ -14,8 +14,8 @@ class MyApp extends StatelessWidget {
     print("Build MyApp");
 
     return StateProvider(
-      //data: ValueNotifier<int>(1),
-      data: CustomData(),
+      state: ListState(),
+      // state: StateValue<int>(1),
       child: const MaterialApp(
         title: 'Example',
         home: MyHomePage(),
@@ -54,12 +54,10 @@ class MyHomeText extends StatelessWidget {
       children: [
         Builder(
           builder: (context) {
-            return Text('Count: ${context.watch<CustomData>().value.toString()}');
-            //return Text('Count: ${context.watch<ValueNotifier<int>>().value}');
+            return Text('Count: ${context.watch<ListState>().value}');
+            // return Text('Count: ${context.watch<StateValue<int>>().value}');
           },
         ),
-        //Text('Count: ${StateProvider.of<ValueNotifier<int>>(context).value}'),
-        //Text('Count: ${StateProvider.of<CounterState>(context).count}'),
       ],
     );
   }
@@ -75,9 +73,8 @@ class MyHomeButton extends StatelessWidget {
     return Center(
       child: ElevatedButton(
         onPressed: () {
-          context.read<CustomData>().increment();
-          //context.read<ValueNotifier<int>>().value++;
-          //StateProvider.of<CounterState>(context, listen: false).increment();
+          context.read<ListState>().increment();
+          //context.read<StateValue<int>>().value++;
         },
         child: const Text('Button'),
       ),
@@ -87,49 +84,18 @@ class MyHomeButton extends StatelessWidget {
 
 //
 
-class CounterState extends ChangeNotifier {
-  int _count = 0;
-
-  int get count => _count;
+class CounterState extends StateValue<int> {
+  CounterState() : super(0);
 
   void increment() {
-    _count++;
-    notifyListeners();
+    value++;
   }
 }
 
-class CounterData extends StateData<int> {
-  CounterData() : super(0);
+class ListState extends StateValue<List<String>> {
+  ListState() : super(["Hey"]);
 
   void increment() {
-    emit(value + 1);
-  }
-}
-
-class ListData extends StateData<List<String>> {
-  ListData() : super(["Hey"]);
-
-  void increment() {
-    emit([...value, "Ciao"]);
-  }
-}
-
-class CustomModel {
-  CustomModel({required this.value1, required this.value2});
-
-  String value1;
-  String value2;
-
-  @override
-  String toString() {
-    return 'CustomModel{value1: $value1, value2: $value2}';
-  }
-}
-
-class CustomData extends StateData<CustomModel> {
-  CustomData() : super(CustomModel(value1: "A", value2: "B"));
-
-  void increment() {
-    emit(CustomModel(value1: "NewA", value2: "NewB"));
+    value = [...value, "Hey"];
   }
 }
