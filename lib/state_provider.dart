@@ -24,7 +24,7 @@ class StateValue<T> implements Listenable {
   /// The value object should be immutable.
   T get value => _value;
   set value(T newValue) {
-    if (_value == newValue) return;
+    if (!shouldUpdate(newValue)) return;
 
     _value = newValue;
     _streamController.add(newValue);
@@ -51,6 +51,14 @@ class StateValue<T> implements Listenable {
   }
 
   bool _firstAccess = true;
+
+  /// Function used to determine if the state value should be updated.
+  ///
+  /// This use the [==] operator by default,
+  /// can be overridden to perform some custom logic.
+  bool shouldUpdate(T newValue) {
+    return value != newValue;
+  }
 
   /// Function called the first time the state is retrieved.
   ///

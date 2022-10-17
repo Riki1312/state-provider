@@ -15,6 +15,78 @@ class TestState extends StateValue<int> {
 }
 
 void main() {
+  group('StateValue', () {
+    test('create a simple StateValue', () {
+      final state = StateValue<int>(0);
+
+      expect(state.value, 0);
+      state.value = 1;
+      expect(state.value, 1);
+    });
+
+    test('get the stream of state values', () {
+      final state = StateValue<int>(0);
+
+      expect(state.stream, emitsInOrder([1, 2, 3]));
+      state.value = 1;
+      state.value = 2;
+      state.value = 3;
+    });
+
+    test('close the stream', () {
+      final state = StateValue<int>(0);
+
+      state.close();
+      expect(state.stream, emitsDone);
+    });
+
+    test('cannot emit new values if closed', () {
+      final state = StateValue<int>(0);
+
+      state.close();
+      expect(() => state.value = 1, throwsStateError);
+    });
+
+    test('listeners are notified', () {
+      final state = StateValue<int>(0);
+      bool l1 = false, l2 = false;
+
+      state.addListener(() => l1 = true);
+      state.addListener(() => l2 = true);
+
+      expect(l1, false);
+      expect(l2, false);
+      state.value = 1;
+
+      expect(Future(() {
+        expect(l1, true);
+        expect(l2, true);
+      }), completes);
+    });
+
+    test('removed listeners are not notified', () {
+      final state = StateValue<int>(0);
+      bool v1 = false, v2 = false;
+      l1() => v1 = true;
+      l2() => v2 = true;
+
+      state.addListener(l1);
+      state.addListener(l2);
+
+      expect(v1, false);
+      expect(v2, false);
+
+      state.removeListener(l1);
+      state.removeListener(l2);
+
+      state.value = 1;
+      expect(Future(() {
+        expect(v1, false);
+        expect(v2, false);
+      }), completes);
+    });
+  });
+
   group('StateProvider', () {
     testWidgets('create a StateProvider with a child Widget', (tester) async {
       final state = StateValue<int>(0);
@@ -27,8 +99,7 @@ void main() {
       expect(find.text('Child Text'), findsOneWidget);
     });
 
-    testWidgets('retrieve the state value from a StateProvider',
-        (tester) async {
+    testWidgets('retrieve the state value', (tester) async {
       final state = StateValue<int>(10);
       final provider = StateProvider(
         state: state,
