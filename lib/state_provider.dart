@@ -1,99 +1,63 @@
+/// A simple-stupid state management library for Flutter.
 library state_provider;
 
 import 'package:flutter/widgets.dart';
+
+class StateValue<T> {
+  StateValue(T initialValue) : _notifier = ValueNotifier<T>(initialValue);
+
+  final ValueNotifier<T> _notifier;
+
+  T get value => _notifier.value;
+  set value(T newValue) => _notifier.value = newValue;
+}
+
+class StateData<T> {
+  StateData(T initialData) : _notifier = ValueNotifier<T>(initialData);
+
+  final ValueNotifier<T> _notifier;
+
+  T get value => _notifier.value;
+
+  @protected
+  void emit(T data) => _notifier.value = data;
+}
 
 /// Provides a state [data] to its descendants Widget.
 ///
 /// Descendants can access and listen to the state using
 /// [StateProvider.of] or through `context.watch` and `context.read`.
 ///
-/// The state object must extends [Listenable] or a class that extends
-/// [Listenable], for example [ValueNotifier] and [ChangeNotifier].
-class StateProvider<T extends Listenable> extends StatefulWidget {
-  const StateProvider({
+/// The state object must extends [StateData].
+class StateProvider<T extends StateData> extends InheritedNotifier {
+  StateProvider({
     Key? key,
     required this.data,
-    required this.child,
-  }) : super(key: key);
+    required super.child,
+  }) : super(key: key, notifier: data._notifier);
 
   /// The state object.
   final T data;
 
-  /// The descendant Widget.
-  final Widget child;
-
-  @override
-  State<StateProvider> createState() => _StateProviderState<T>();
-
-  /// Returns the state from the nearest [StateProvider]
+  /// Retrieve and listen to the state from the nearest [StateProvider]
   /// ancestor that holds a state of type [T].
   ///
-  /// Use [listen] to listen to the state changes.
+  /// Set [listen] to `false` to not rebuild
+  /// the Widget when the state notifies changes.
   ///
   /// If the [StateProvider] is not found, throws a [StateProviderNotFound] error.
-  static T of<T extends Listenable>(
+  static T of<T extends StateData>(
     BuildContext context, {
     bool listen = true,
   }) {
     final inherited = listen
-        ? context
-            .dependOnInheritedWidgetOfExactType<_InheritedStateProvider<T>>()
-        : context.findAncestorWidgetOfExactType<_InheritedStateProvider<T>>();
+        ? context.dependOnInheritedWidgetOfExactType<StateProvider<T>>()
+        : context.findAncestorWidgetOfExactType<StateProvider<T>>();
 
     if (inherited == null) {
       throw StateProviderNotFound(T.runtimeType, context.widget.runtimeType);
     }
     return inherited.data;
-  }
-}
-
-class _StateProviderState<T extends Listenable> extends State<StateProvider> {
-  @override
-  Widget build(BuildContext context) {
-    return _InheritedStateProvider<T>(
-      data: widget.data as T,
-      child: widget.child,
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    widget.data.addListener(_update);
-  }
-
-  @override
-  void dispose() {
-    widget.data.removeListener(_update);
-    super.dispose();
-  }
-
-  @override
-  void didUpdateWidget(StateProvider oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.data != widget.data) {
-      oldWidget.data.removeListener(_update);
-      widget.data.addListener(_update);
-    }
-  }
-
-  void _update() {
-    setState(() {});
-  }
-}
-
-class _InheritedStateProvider<T extends Listenable> extends InheritedWidget {
-  const _InheritedStateProvider({
-    Key? key,
-    required this.data,
-    required child,
-  }) : super(key: key, child: child);
-
-  final T data;
-
-  @override
-  bool updateShouldNotify(_InheritedStateProvider oldWidget) {
-    return !identical(oldWidget, this);
   }
 }
 
@@ -116,6 +80,7 @@ class StateProviderNotFound implements Exception {
   String toString() {
     return '''
 Failed to find a StateProvider<$stateType> ancestor above $widgetType Widget.
+
 This can happen if the context you used comes from a Widget above the StateProvider
 or from the same Widget as that whose StateProvider is sought.
 ''';
@@ -133,11 +98,11 @@ extension StateContext on BuildContext {
   /// This is a shorthand for `StateProvider.of<T>(context, listen: false)`.
   ///
   /// If the [StateProvider] is not found, throws a [StateProviderNotFound] error.
-  T read<T extends Listenable>() {
+  T read<T extends StateData>() {
     return StateProvider.of<T>(this, listen: false);
   }
 
-  /// Retrieve and listen to the state of the nearest [StateProvider]
+  /// Retrieve and listen to the state from the nearest [StateProvider]
   /// ancestor that holds a state of type [T].
   ///
   /// As the opposite of [read], this will rebuild
@@ -146,7 +111,7 @@ extension StateContext on BuildContext {
   /// This is a shorthand for `StateProvider.of<T>(context)`.
   ///
   /// If the [StateProvider] is not found, throws a [StateProviderNotFound] error.
-  T watch<T extends Listenable>() {
+  T watch<T extends StateData>() {
     return StateProvider.of<T>(this);
   }
 }

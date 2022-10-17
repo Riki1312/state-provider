@@ -14,8 +14,8 @@ class MyApp extends StatelessWidget {
     print("Build MyApp");
 
     return StateProvider(
-      data: ValueNotifier<int>(1),
-      //data: CounterState(),
+      //data: ValueNotifier<int>(1),
+      data: CustomData(),
       child: const MaterialApp(
         title: 'Example',
         home: MyHomePage(),
@@ -54,7 +54,8 @@ class MyHomeText extends StatelessWidget {
       children: [
         Builder(
           builder: (context) {
-            return Text('Count: ${context.watch<ValueNotifier<int>>().value}');
+            return Text('Count: ${context.watch<CustomData>().value.toString()}');
+            //return Text('Count: ${context.watch<ValueNotifier<int>>().value}');
           },
         ),
         //Text('Count: ${StateProvider.of<ValueNotifier<int>>(context).value}'),
@@ -74,7 +75,8 @@ class MyHomeButton extends StatelessWidget {
     return Center(
       child: ElevatedButton(
         onPressed: () {
-          context.read<ValueNotifier<int>>().value++;
+          context.read<CustomData>().increment();
+          //context.read<ValueNotifier<int>>().value++;
           //StateProvider.of<CounterState>(context, listen: false).increment();
         },
         child: const Text('Button'),
@@ -93,5 +95,41 @@ class CounterState extends ChangeNotifier {
   void increment() {
     _count++;
     notifyListeners();
+  }
+}
+
+class CounterData extends StateData<int> {
+  CounterData() : super(0);
+
+  void increment() {
+    emit(value + 1);
+  }
+}
+
+class ListData extends StateData<List<String>> {
+  ListData() : super(["Hey"]);
+
+  void increment() {
+    emit([...value, "Ciao"]);
+  }
+}
+
+class CustomModel {
+  CustomModel({required this.value1, required this.value2});
+
+  String value1;
+  String value2;
+
+  @override
+  String toString() {
+    return 'CustomModel{value1: $value1, value2: $value2}';
+  }
+}
+
+class CustomData extends StateData<CustomModel> {
+  CustomData() : super(CustomModel(value1: "A", value2: "B"));
+
+  void increment() {
+    emit(CustomModel(value1: "NewA", value2: "NewB"));
   }
 }
