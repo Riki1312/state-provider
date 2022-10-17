@@ -1,14 +1,20 @@
 /// A simple-stupid state management library for Flutter.
 library state_provider;
 
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 /// Contains the immutable value of a state.
-class StateValue<T> {
+class StateValue<T> implements Listenable {
   /// Creates a [StateValue] with the given [initialValue].
-  StateValue(T initialValue) : _notifier = ValueNotifier<T>(initialValue);
+  StateValue(T initialValue) : _value = initialValue;
 
-  final ValueNotifier<T> _notifier;
+  T _value;
+
+  final _streamController = StreamController<T>.broadcast();
+
+  final _subscriptions = <VoidCallback, StreamSubscription<T>>{};
 
   /// The current value of the state.
   ///
@@ -16,8 +22,33 @@ class StateValue<T> {
   /// the Widgets listening to this state will be rebuilt.
   ///
   /// The value object should be immutable.
-  T get value => _notifier.value;
-  set value(T newValue) => _notifier.value = newValue;
+  T get value => _value;
+  set value(T newValue) {
+    if (_value == newValue) return;
+
+    _value = newValue;
+    _streamController.add(newValue);
+  }
+
+  /// The [Stream] of state values.
+  Stream<T> get stream => _streamController.stream;
+
+  /// Close the [stream] and release the resources.
+  Future<void> close() async {
+    await _streamController.close();
+    _subscriptions.clear();
+  }
+
+  @override
+  void addListener(VoidCallback listener) {
+    final subscription = _streamController.stream.listen((_) => listener());
+    _subscriptions[listener] = subscription;
+  }
+
+  @override
+  void removeListener(VoidCallback listener) {
+    _subscriptions.remove(listener)?.cancel();
+  }
 }
 
 /// Provides a [state] to its descendants Widget.
@@ -28,11 +59,11 @@ class StateValue<T> {
 /// The state object must extends [StateValue].
 class StateProvider<T extends StateValue> extends InheritedNotifier {
   /// Creates a [StateProvider] with the given [state].
-  StateProvider({
+  const StateProvider({
     Key? key,
     required this.state,
     required super.child,
-  }) : super(key: key, notifier: state._notifier);
+  }) : super(key: key, notifier: state);
 
   /// The state object.
   final T state;

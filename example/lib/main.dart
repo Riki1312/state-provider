@@ -13,12 +13,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     print("Build MyApp");
 
+    final counter = CounterState();
+
     return StateProvider(
-      state: ListState(),
-      // state: StateValue<int>(1),
-      child: const MaterialApp(
-        title: 'Example',
-        home: MyHomePage(),
+      state: counter,
+      child: StateProvider(
+        state: ListState(counter),
+        // state: StateValue<int>(1),
+        child: const MaterialApp(
+          title: 'Example',
+          home: MyHomePage(),
+        ),
       ),
     );
   }
@@ -53,10 +58,10 @@ class MyHomeText extends StatelessWidget {
     return Column(
       children: [
         Builder(
-          builder: (context) {
-            return Text('Count: ${context.watch<ListState>().value}');
-            // return Text('Count: ${context.watch<StateValue<int>>().value}');
-          },
+          builder: (c) => Text('Count: ${c.watch<CounterState>().value}'),
+        ),
+        Builder(
+          builder: (c) => Text('List: ${c.watch<ListState>().value}'),
         ),
       ],
     );
@@ -73,8 +78,7 @@ class MyHomeButton extends StatelessWidget {
     return Center(
       child: ElevatedButton(
         onPressed: () {
-          context.read<ListState>().increment();
-          //context.read<StateValue<int>>().value++;
+          context.read<CounterState>().increment();
         },
         child: const Text('Button'),
       ),
@@ -93,9 +97,11 @@ class CounterState extends StateValue<int> {
 }
 
 class ListState extends StateValue<List<String>> {
-  ListState() : super(["Hey"]);
-
-  void increment() {
-    value = [...value, "Hey"];
+  ListState(this.counterState) : super([]) {
+    counterState.stream.where((number) => number.isOdd).listen((number) {
+      value = [...value, "Odd: $number"];
+    });
   }
+
+  final CounterState counterState;
 }
