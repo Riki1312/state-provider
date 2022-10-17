@@ -1,5 +1,5 @@
 name: state_provider
-description: A simple-stupid state management library for Flutter.
+description: A super simple state management library for Flutter.
 version: 0.0.1
 homepage: https://github.com/Riki1312/state-provider
 repository: https://github.com/Riki1312/state-provider
