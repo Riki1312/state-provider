@@ -9,9 +9,9 @@ class UserState extends StateValue<DataValue> {
   UserState() : super(DataLoading());
 
   @override
-  void onFirstAccess() => loadData();
+  void onFirstAccess() => fetchData();
 
-  void loadData() async {
+  void fetchData() async {
     value = DataLoading();
 
     // Fake fetch data.
@@ -21,7 +21,7 @@ class UserState extends StateValue<DataValue> {
     if (random < 5) {
       value = DataError('Error fetching user data');
     } else {
-      value = DataReady('User: Riccardo');
+      value = DataReady('Riccardo');
     }
   }
 }
@@ -73,10 +73,10 @@ class MyHomeText extends StatelessWidget {
       context.watch<UserState>().value,
       loading: (_) => const CircularProgressIndicator(),
       error: (message) => TextButton(
-        onPressed: () => context.read<UserState>().loadData(),
+        onPressed: () => context.read<UserState>().fetchData(),
         child: Text('$message - Retry'),
       ),
-      ready: (data) => Text(data),
+      ready: (data) => Text('User: $data'),
     );
   }
 }
