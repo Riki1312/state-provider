@@ -7,7 +7,7 @@ It uses no external libraries and is therefore really easy to integrate and debu
 
 Super simple doesn't mean poorly implemented, though. It's actually pretty powerful:
 
-- 🪨 Built around **immutable states**, making it easier to keep track of state changes.
+- 🪨 Built around **immutable values**, making it easier to keep track of state changes.
 - 🌌 Full **support for streams**, allows states to interact with each other.
 - 🕹️ Efficient separation of states data from states mutation logic.
 - ✨ Convenient access to states directly from the context.
