@@ -4,14 +4,16 @@ import 'package:flutter/widgets.dart';
 import 'package:state_provider/state_provider.dart';
 
 class TestState extends StateValue<int> {
-  TestState(int value) : super(value);
+  TestState(int value, {bool persistent = false})
+      : super(value, persistent: persistent);
 
-  bool firstAccess = false;
+  bool accessed = false, closed = false;
 
   @override
-  void onFirstAccess() {
-    firstAccess = true;
-  }
+  Future<void> onFirstAccess() async => accessed = true;
+
+  @override
+  Future<void> onClose() async => closed = true;
 }
 
 void main() {
@@ -40,10 +42,10 @@ void main() {
       expect(state.stream, emitsDone);
     });
 
-    test('cannot emit new values if closed', () {
+    test('cannot emit new values if closed', () async {
       final state = StateValue<int>(0);
 
-      state.close();
+      await state.close();
       expect(() => state.value = 1, throwsStateError);
     });
 
@@ -85,6 +87,51 @@ void main() {
         expect(v2, false);
       }), completes);
     });
+
+    test('onFirstAccess function is called', () {
+      final state = TestState(0);
+
+      expect(state.accessed, false);
+      state.value = 1;
+      expect(state.accessed, true);
+    });
+
+    test('onClose function is called', () async {
+      final state = TestState(0);
+
+      expect(state.closed, false);
+      await state.close();
+      expect(state.closed, true);
+    });
+
+    test('state is closed when all listeners are removed', () {
+      final state = TestState(0);
+      l1() {}
+      l2() {}
+
+      state.addListener(l1);
+      state.addListener(l2);
+
+      expect(state.closed, false);
+      state.removeListener(l1);
+      expect(state.closed, false);
+      state.removeListener(l2);
+      expect(state.closed, true);
+    });
+
+    test('state persistent is not closed when all listeners are removed', () {
+      final state = TestState(0, persistent: true);
+      l1() {}
+      l2() {}
+
+      state.addListener(l1);
+      state.addListener(l2);
+
+      expect(state.closed, false);
+      state.removeListener(l1);
+      state.removeListener(l2);
+      expect(state.closed, false);
+    });
   });
 
   group('StateProvider', () {
@@ -113,7 +160,7 @@ void main() {
       expect(find.text('10'), findsOneWidget);
     });
 
-    testWidgets('listen to the state rebuild the Widget', (tester) async {
+    testWidgets('listen to the state rebuild the widget', (tester) async {
       int buildCount = 0;
       final state = StateValue<int>(10);
       final provider = StateProvider(
@@ -136,7 +183,7 @@ void main() {
       expect(buildCount, 2);
     });
 
-    testWidgets('reading the state does not rebuild the Widget',
+    testWidgets('reading the state does not rebuild the widget',
         (tester) async {
       int buildCount = 0;
       final state = StateValue<int>(10);
@@ -159,24 +206,6 @@ void main() {
       expect(find.text('10'), findsOneWidget);
       expect(find.text('20'), findsNothing);
       expect(buildCount, 1);
-    });
-
-    testWidgets('the first access to the state triggers onFirstAccess',
-        (tester) async {
-      final provider = StateProvider(
-        state: TestState(10),
-        child: Builder(builder: (context) {
-          final v = StateProvider.of<TestState>(context).value;
-          return Text('$v', textDirection: TextDirection.ltr);
-        }),
-      );
-
-      expect(provider.state.firstAccess, false);
-
-      await tester.pumpWidget(provider);
-
-      expect(find.text('10'), findsOneWidget);
-      expect(provider.state.firstAccess, true);
     });
 
     testWidgets('throws an error if the StateProvider is not found',
@@ -226,7 +255,7 @@ void main() {
       expect(find.text('10'), findsOneWidget);
     });
 
-    testWidgets('reading the state does not rebuild the Widget',
+    testWidgets('reading the state does not rebuild the widget',
         (tester) async {
       int buildCount = 0;
       final state = StateValue<int>(10);
@@ -251,7 +280,7 @@ void main() {
       expect(buildCount, 1);
     });
 
-    testWidgets('watching the state rebuild the Widget', (tester) async {
+    testWidgets('watching the state rebuild the widget', (tester) async {
       int buildCount = 0;
       final state = StateValue<int>(10);
       final provider = StateProvider(

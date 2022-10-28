@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:state_provider/state_provider.dart';
 
@@ -10,13 +12,16 @@ class CounterState extends StateValue<int> {
 }
 
 class ListState extends StateValue<List<String>> {
-  ListState(this.counterState) : super([]) {
-    counterState.stream.where((number) => number.isOdd).listen((number) {
+  ListState(CounterState counterState) : super([]) {
+    sub = counterState.stream.where((number) => number.isOdd).listen((number) {
       value = [...value, "Odd: $number"];
     });
   }
 
-  final CounterState counterState;
+  StreamSubscription? sub;
+
+  @override
+  Future<void> onClose() async => sub?.cancel();
 }
 
 //

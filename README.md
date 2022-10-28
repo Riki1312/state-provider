@@ -7,10 +7,11 @@ It uses no external libraries and is therefore really easy to integrate and debu
 
 Super simple doesn't mean poorly implemented, though. It's actually pretty powerful:
 
-- 🪨 Built around **immutable states**, making it easier to keep track of state changes in the application.
-- 🌌 Full **support for streams**, allows states to interact with each other (and other cool stuff).
+- 🪨 Built around **immutable states**, making it easier to keep track of state changes.
+- 🌌 Full **support for streams**, allows states to interact with each other.
 - 🕹️ Efficient separation of states data from states mutation logic.
-- ✨ Convenient access to states directly from the widget context (optimize rebuilds).
+- ✨ Convenient access to states directly from the context.
+- 🧹 Automatic dispose of states when they are no longer used.
 
 Inspired by popular libraries like [Provider](https://pub.dev/packages/provider)
 and [Bloc](https://pub.dev/packages/bloc), but built around Flutter's existing
@@ -83,13 +84,16 @@ that works with the first to keep track of odd numbers inside a list.
 
 ```dart
 class ListState extends StateValue<List<String>> {
-  ListState(this.counterState) : super([]) {
-    counterState.stream.where((number) => number.isOdd).listen((number) {
+  ListState(CounterState counterState) : super([]) {
+    sub = counterState.stream.where((number) => number.isOdd).listen((number) {
       value = [...value, "Odd: $number"];
     });
   }
 
-  final CounterState counterState;
+  StreamSubscription? sub;
+
+  @override
+  Future<void> onClose() async => sub?.cancel();
 }
 ```
 

@@ -1,4 +1,4 @@
-/// A simple-stupid state management library for Flutter.
+/// A super simple state management library for Flutter.
 library state_provider;
 
 import 'dart:async';
@@ -8,21 +8,38 @@ import 'package:flutter/widgets.dart';
 /// Contains the immutable value of a state.
 class StateValue<T> implements Listenable {
   /// Creates a [StateValue] with the given [initialValue].
-  StateValue(T initialValue) : _value = initialValue;
+  ///
+  /// [persistent] indicates that the state should not be closed
+  /// automatically when all its listeners are removed.
+  StateValue(
+    T initialValue, {
+    bool persistent = false,
+  })  : _value = initialValue,
+        _persistent = persistent;
 
   T _value;
 
-  final _streamController = StreamController<T>.broadcast();
+  bool _accessed = false, _closed = false;
 
+  final bool _persistent;
+
+  final _streamController = StreamController<T>.broadcast();
   final _subscriptions = <VoidCallback, StreamSubscription<T>>{};
 
   /// The current value of the state.
   ///
   /// When this value is set to a new object,
-  /// the Widgets listening to this state will be rebuilt.
+  /// the widgets listening to this state will be rebuilt.
   ///
   /// The value object should be immutable.
-  T get value => _value;
+  T get value {
+    if (!_accessed) {
+      _accessed = true;
+      onFirstAccess();
+    }
+    return _value;
+  }
+
   set value(T newValue) {
     if (!shouldUpdate(newValue)) return;
 
@@ -35,6 +52,10 @@ class StateValue<T> implements Listenable {
 
   /// Close the [stream] and release the resources.
   Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+
+    await onClose();
     await _streamController.close();
     _subscriptions.clear();
   }
@@ -48,9 +69,11 @@ class StateValue<T> implements Listenable {
   @override
   void removeListener(VoidCallback listener) {
     _subscriptions.remove(listener)?.cancel();
+    // Close the stream if there is no listener and the state is not persistent.
+    if (_subscriptions.isEmpty && !_persistent) {
+      close();
+    }
   }
-
-  bool _firstAccess = true;
 
   /// Function used to determine if the state value should be updated.
   ///
@@ -60,22 +83,20 @@ class StateValue<T> implements Listenable {
     return value != newValue;
   }
 
-  /// Function called the first time the state is retrieved.
+  /// Function called the first time the state [value] is accessed.
   ///
   /// This can be overridden to perform some initial state setup.
   /// For example, to load data from a remote source.
-  void onFirstAccess() async {}
+  Future<void> onFirstAccess() async {}
 
-  void _notifyAccess() {
-    // Notify the first access.
-    if (_firstAccess) {
-      _firstAccess = false;
-      onFirstAccess();
-    }
-  }
+  /// Function called before the state is closed.
+  ///
+  /// This can be overridden to perform some cleanup.
+  /// For example, to cancel a subscription.
+  Future<void> onClose() async {}
 }
 
-/// Provides a [state] to its descendants Widget.
+/// Provides a [state] to its descendants widgets.
 ///
 /// Descendants can access and listen to the state using
 /// [StateProvider.of] or through `context.watch` and `context.read`.
@@ -96,7 +117,7 @@ class StateProvider<T extends StateValue> extends InheritedNotifier {
   /// ancestor that holds a state of type [T].
   ///
   /// Set [listen] to `false` to not rebuild
-  /// the Widget when the state value changes.
+  /// the widget when the state value changes.
   ///
   /// If the [StateProvider] is not found, throws a [StateNotFoundException].
   static T of<T extends StateValue>(
@@ -110,7 +131,6 @@ class StateProvider<T extends StateValue> extends InheritedNotifier {
       throw StateNotFoundException(T.runtimeType, context.widget.runtimeType);
     }
 
-    inherited.state._notifyAccess();
     return inherited.state;
   }
 }
@@ -126,7 +146,7 @@ class StateNotFoundException implements Exception {
   /// Type of the state being retrieved.
   final Type stateType;
 
-  /// Type of the Widget requesting the state.
+  /// Type of the widget requesting the state.
   final Type widgetType;
 
   @override
@@ -134,8 +154,8 @@ class StateNotFoundException implements Exception {
     return '''
 Failed to find a StateProvider<$stateType> ancestor above $widgetType Widget.
 
-This can happen if the context you used comes from a Widget above the StateProvider
-or from the same Widget as that whose StateProvider is sought.
+This can happen if the context you used comes from a widget above the StateProvider
+or from the same widget as that whose StateProvider is sought.
 ''';
   }
 }
@@ -146,7 +166,7 @@ extension StateContext on BuildContext {
   /// ancestor that holds a state of type [T].
   ///
   /// As the opposite of [watch], this will not rebuild
-  /// the Widget when the state value changes.
+  /// the widget when the state value changes.
   ///
   /// This is a shorthand for `StateProvider.of<T>(context, listen: false)`.
   ///
@@ -159,7 +179,7 @@ extension StateContext on BuildContext {
   /// ancestor that holds a state of type [T].
   ///
   /// As the opposite of [read], this will rebuild
-  /// the Widget when the state value changes.
+  /// the widget when the state value changes.
   ///
   /// This is a shorthand for `StateProvider.of<T>(context)`.
   ///

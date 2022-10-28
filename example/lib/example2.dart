@@ -6,12 +6,12 @@ import 'package:state_provider/state_provider.dart';
 import 'package:state_provider_example/data_value.dart';
 
 class UserState extends StateValue<DataValue> {
-  UserState() : super(DataLoading());
+  UserState() : super(DataLoading(), persistent: true);
 
   @override
-  void onFirstAccess() => fetchData();
+  Future<void> onFirstAccess() async => fetchData();
 
-  void fetchData() async {
+  Future<void> fetchData() async {
     value = DataLoading();
 
     // Fake fetch data.
