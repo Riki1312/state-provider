@@ -9,8 +9,10 @@ class CounterIncrement extends CounterEvent {}
 class CounterDecrement extends CounterEvent {}
 
 class CounterBloc extends StateBloc<CounterEvent, int> {
-  CounterBloc() : super(0) {
+  CounterBloc()
+      : super(0, transformer: debounceSequential(const Duration(seconds: 1))) {
     on<CounterIncrement>((event, emit) async {
+      //await Future.delayed(const Duration(seconds: 4));
       emit(state + 1);
     });
     on<CounterDecrement>((event, emit) async {
