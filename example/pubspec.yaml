@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   #
+  stream_transform: ^2.1.0
   state_provider:
     path: ../
 

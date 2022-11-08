@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:state_provider/state_provider.dart';
 
@@ -12,16 +10,11 @@ class CounterState extends StateValue<int> {
 }
 
 class ListState extends StateValue<List<String>> {
-  ListState(CounterState counterState) : super([]) {
-    sub = counterState.stream.where((number) => number.isOdd).listen((number) {
-      value = [...value, "Odd: $number"];
-    });
+  ListState() : super([]);
+
+  void add(String item) {
+    value = [...value, item];
   }
-
-  StreamSubscription? sub;
-
-  @override
-  Future<void> onClose() async => sub?.cancel();
 }
 
 //
@@ -33,13 +26,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     print("Build MyApp");
 
-    final counter = CounterState();
+    final counterState = CounterState();
+    final listState = ListState();
+    listState.addSource(
+      counterState.stream.where((n) => n.isOdd),
+      onData: (n) => listState.add("Odd: $n"),
+    );
 
     return StateProvider(
-      state: counter,
+      state: counterState,
       child: StateProvider(
-        state: ListState(counter),
-        // state: StateValue<int>(1),
+        state: listState,
         child: const MaterialApp(
           title: 'Example',
           home: MyHomePage(),

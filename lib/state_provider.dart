@@ -19,12 +19,13 @@ class StateValue<T> implements Listenable {
 
   T _value;
 
-  bool _accessed = false, _closed = false;
+  bool _accessed = false;
 
   final bool _persistent;
 
   final _streamController = StreamController<T>.broadcast();
   final _subscriptions = <VoidCallback, StreamSubscription<T>>{};
+  final _sourceSubscriptions = <Stream, StreamSubscription>{};
 
   /// The current value of the state.
   ///
@@ -51,13 +52,23 @@ class StateValue<T> implements Listenable {
   Stream<T> get stream => _streamController.stream;
 
   /// Close the [stream] and release the resources.
+  ///
+  /// This also closes all subscriptions from sources and listeners.
   Future<void> close() async {
-    if (_closed) return;
-    _closed = true;
+    if (_streamController.isClosed) return;
 
     await onClose();
-    await _streamController.close();
+    // Close sources subscriptions.
+    for (var s in _sourceSubscriptions.values) {
+      await s.cancel();
+    }
+    _sourceSubscriptions.clear();
+    // Close listeners subscriptions.
+    for (var s in _subscriptions.values) {
+      await s.cancel();
+    }
     _subscriptions.clear();
+    await _streamController.close();
   }
 
   @override
@@ -70,9 +81,20 @@ class StateValue<T> implements Listenable {
   void removeListener(VoidCallback listener) {
     _subscriptions.remove(listener)?.cancel();
     // Close the stream if there is no listener and the state is not persistent.
-    if (_subscriptions.isEmpty && !_persistent) {
+    if (!_streamController.hasListener && !_persistent) {
       close();
     }
+  }
+
+  /// Add a source [Stream] to this state.
+  void addSource<S>(Stream<S> stream, {required Function(S data) onData}) {
+    final subscription = stream.listen(onData);
+    _sourceSubscriptions[stream] = subscription;
+  }
+
+  /// Remove a previously added source [Stream] from this state.
+  void removeSource<S>(Stream<S> stream) {
+    _sourceSubscriptions.remove(stream)?.cancel();
   }
 
   /// Function used to determine if the state value should be updated.
