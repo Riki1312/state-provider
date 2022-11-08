@@ -10,10 +10,10 @@ class CounterDecrement extends CounterEvent {}
 
 class CounterBloc extends StateBloc<CounterEvent, int> {
   CounterBloc() : super(0) {
-    on<CounterIncrement>((event, emit) {
+    on<CounterIncrement>((event, emit) async {
       emit(state + 1);
     });
-    on<CounterDecrement>((event, emit) {
+    on<CounterDecrement>((event, emit) async {
       emit(state - 1);
     });
   }

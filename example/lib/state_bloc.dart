@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:state_provider/state_provider.dart';
 
-typedef EmitFunction<T> = void Function(T state);
-typedef ActionFunction<E, T> = void Function(E event, EmitFunction<T> emit);
+typedef Emitter<T> = void Function(T state);
+typedef ActionFunction<E, T> = Future<void> Function(E event, Emitter<T> emit);
 
 class StateBloc<E, T> extends StateValue<T> {
   StateBloc(T initialValue) : super(initialValue) {
@@ -20,14 +20,14 @@ class StateBloc<E, T> extends StateValue<T> {
     _actions[S] = action;
   }
 
-  void _onData(E? event) {
+  Future<void> _onData(E? event) async {
     if (event == null) {
       return;
     }
 
     final action = _actions[event.runtimeType];
     if (action != null) {
-      action(event, (T state) => value = state);
+      await action(event, (T state) => value = state);
     }
   }
 }

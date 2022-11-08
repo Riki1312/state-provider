@@ -87,8 +87,14 @@ class StateValue<T> implements Listenable {
   }
 
   /// Add a source [Stream] to this state.
-  void addSource<S>(Stream<S> stream, {required Function(S data) onData}) {
-    final subscription = stream.listen(onData);
+  void addSource<S>(
+    Stream<S> stream, {
+    required FutureOr<void> Function(S data) onData,
+  }) {
+    final subscription = stream.asyncMap((event) async {
+      await onData(event);
+      return event;
+    }).listen((_) {});
     _sourceSubscriptions[stream] = subscription;
   }
 
