@@ -9,15 +9,22 @@ class CounterIncrement extends CounterEvent {}
 class CounterDecrement extends CounterEvent {}
 
 class CounterBloc extends StateBloc<CounterEvent, int> {
-  CounterBloc()
-      : super(0, transformer: debounceSequential(const Duration(seconds: 1))) {
-    on<CounterIncrement>((event, emit) async {
-      //await Future.delayed(const Duration(seconds: 4));
-      emit(state + 1);
-    });
-    on<CounterDecrement>((event, emit) async {
-      emit(state - 1);
-    });
+  CounterBloc() : super(0) {
+    on<CounterIncrement>(
+      (event, emit) async {
+        await Future.delayed(const Duration(seconds: 4));
+        emit(state + 1);
+      },
+      transformer: concurrent(),
+    );
+
+    on<CounterDecrement>(
+      (event, emit) async {
+        await Future.delayed(const Duration(seconds: 4));
+        emit(state - 1);
+      },
+      transformer: sequential(),
+    );
   }
 }
 
@@ -66,8 +73,8 @@ class MyHomeText extends StatelessWidget {
   Widget build(BuildContext context) {
     print("Build MyHomeText");
 
-    return BlocBuilder<CounterEvent, int>(
-      builder: (context, state) {
+    return BlocBuilder<CounterBloc, int>(
+      builder: (context, state, _) {
         return Text("Counter: $state");
       },
     );
@@ -84,13 +91,11 @@ class MyHomeButton extends StatelessWidget {
     return Column(
       children: [
         ElevatedButton(
-          onPressed: () =>
-              context.bloc<CounterEvent, int>().add(CounterIncrement()),
+          onPressed: () => context.bloc<CounterBloc>().add(CounterIncrement()),
           child: const Text('Increment'),
         ),
         ElevatedButton(
-          onPressed: () =>
-              context.bloc<CounterEvent, int>().add(CounterDecrement()),
+          onPressed: () => context.bloc<CounterBloc>().add(CounterDecrement()),
           child: const Text('Decrement'),
         ),
       ],

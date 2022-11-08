@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
-import 'package:state_provider/state_provider.dart';
 import 'package:stream_transform/stream_transform.dart';
+import 'package:state_provider/state_provider.dart';
 
 typedef Emitter<T> = void Function(T state);
 typedef Action<E, T> = Future<void> Function(
@@ -41,73 +41,81 @@ EventTransformer<E> debounceSequential<E>(
 class StateBloc<E, T> extends StateValue<T> {
   StateBloc(
     T initialValue, {
-    EventTransformer<E?>? transformer,
+    EventTransformer<E?>? defaultTransformer,
   }) : super(initialValue) {
-    final source = (transformer ?? concurrent())(
-      _events.stream,
+    _defaultTransformer = defaultTransformer ?? concurrent();
+  }
+
+  final StateValue<E?> _events = StateValue(null);
+  late final EventTransformer<E?> _defaultTransformer;
+
+  T get state => value;
+
+  void add(E event) => _events.value = event;
+
+  void on<S extends E>(
+    Action<E, T> action, {
+    EventTransformer<E?>? transformer,
+  }) {
+    final source = (transformer ?? _defaultTransformer)(
+      _events.stream.where((event) => event is S),
       (event) async {
-        await _onData(event);
+        if (event != null) {
+          await action(event, (T state) => value = state);
+        }
         return event;
       },
     );
 
     addSource(source, onData: (_) {});
   }
+}
 
-  final _events = StateValue<E?>(null);
-  final _actions = <Type, Action<E, T>>{};
+class BlocProvider<B extends StateBloc> extends InheritedNotifier {
+  const BlocProvider({
+    Key? key,
+    required this.bloc,
+    required super.child,
+  }) : super(key: key, notifier: bloc);
 
-  T get state => value;
+  final B bloc;
 
-  void add(E event) => _events.value = event;
-
-  void on<S extends E>(Action<E, T> action) {
-    _actions[S] = action;
-  }
-
-  Future<void> _onData(E? event) async {
-    if (event == null) {
-      return;
+  static B of<B extends StateBloc>(
+    BuildContext context, {
+    bool listen = true,
+  }) {
+    final inherited = listen
+        ? context.dependOnInheritedWidgetOfExactType<BlocProvider<B>>()
+        : context.findAncestorWidgetOfExactType<BlocProvider<B>>();
+    if (inherited == null) {
+      throw StateNotFoundException(B.runtimeType, context.widget.runtimeType);
     }
 
-    final action = _actions[event.runtimeType];
-    if (action != null) {
-      await action(event, (T state) => value = state);
-    }
+    return inherited.bloc;
   }
 }
 
-class BlocProvider<E, T> extends StatelessWidget {
-  const BlocProvider({
-    required this.bloc,
-    required this.child,
+class BlocBuilder<B extends StateBloc, T> extends StatelessWidget {
+  const BlocBuilder({
     Key? key,
+    required this.builder,
+    this.child,
   }) : super(key: key);
 
-  final StateBloc<E, T> bloc;
-  final Widget child;
+  final Widget Function(BuildContext context, T state, Widget? child) builder;
+  final Widget? child;
 
   @override
   Widget build(BuildContext context) {
-    return StateProvider(state: bloc, child: child);
-  }
-}
-
-class BlocBuilder<E, T> extends StatelessWidget {
-  const BlocBuilder({required this.builder, Key? key}) : super(key: key);
-
-  final Widget Function(BuildContext context, T state) builder;
-
-  @override
-  Widget build(BuildContext context) {
-    return Builder(builder: (context) {
-      final bloc = StateProvider.of<StateBloc<E, T>>(context);
-      return builder(context, bloc.state);
-    });
+    final bloc = context.bloc<B>();
+    return AnimatedBuilder(
+      animation: bloc,
+      builder: (context, child) => builder(context, bloc.state, child),
+      child: child,
+    );
   }
 }
 
 extension BlocContext on BuildContext {
-  StateBloc<E, T> bloc<E, T>() =>
-      StateProvider.of<StateBloc<E, T>>(this, listen: false);
+  B bloc<B extends StateBloc>() => BlocProvider.of<B>(this, listen: false);
 }

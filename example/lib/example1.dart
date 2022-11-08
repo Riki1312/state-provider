@@ -94,9 +94,7 @@ class MyHomeButton extends StatelessWidget {
 
     return Center(
       child: ElevatedButton(
-        onPressed: () {
-          context.read<CounterState>().increment();
-        },
+        onPressed: () => context.read<CounterState>().increment(),
         child: const Text('Button'),
       ),
     );
