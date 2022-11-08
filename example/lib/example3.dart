@@ -11,8 +11,8 @@ class CounterDecrement extends CounterEvent {}
 class CounterBloc extends StateBloc<CounterEvent, int> {
   CounterBloc() : super(0) {
     on<CounterIncrement>(
-      (event, emit) async {
-        await Future.delayed(const Duration(seconds: 4));
+      (event, emit) {
+        //await Future.delayed(const Duration(seconds: 4));
         emit(state + 1);
       },
       transformer: concurrent(),

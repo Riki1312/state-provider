@@ -5,7 +5,7 @@ import 'package:stream_transform/stream_transform.dart';
 import 'package:state_provider/state_provider.dart';
 
 typedef Emitter<T> = void Function(T state);
-typedef Action<E, T> = Future<void> Function(
+typedef Action<E, T> = FutureOr<void> Function(
   E event,
   Emitter<T> emit,
 );
